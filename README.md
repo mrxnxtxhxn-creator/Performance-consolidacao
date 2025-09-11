@@ -94,6 +94,9 @@
             transition: transform 0.2s, background var(--transition-speed);
         }
         .kpi-card:hover { transform: translateY(-5px); }
+        .kpi-card h3 { font-size: 1rem; }
+        .kpi-card p { font-size: 1.5rem; font-weight: bold; }
+
 
         .charts-grid {
             display: grid;
@@ -127,39 +130,18 @@
         .form-controls { display: flex; flex-wrap: wrap; align-items: center; }
         .no-data-row td { text-align: center; color: #777; padding: 20px; }
 
-        /* Estilos do Modal de Confirmação */
         .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center;
+            align-items: center; z-index: 1000;
         }
-
         .modal-content {
-            background: var(--secondary-bg);
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            max-width: 400px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            background: var(--secondary-bg); padding: 30px; border-radius: 10px;
+            text-align: center; max-width: 400px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
-
-        .modal-buttons {
-            margin-top: 20px;
-        }
-        
-        #confirmClearBtn {
-            background-color: var(--danger-color);
-        }
-        #confirmClearBtn:hover {
-            background-color: var(--danger-hover-color);
-        }
+        .modal-buttons { margin-top: 20px; }
+        #confirmClearBtn { background-color: var(--danger-color); }
+        #confirmClearBtn:hover { background-color: var(--danger-hover-color); }
     </style>
 </head>
 <body>
@@ -177,14 +159,11 @@
         </header>
 
         <div class="control-panel">
-            <h2>Adicionar Operação Manualmente</h2>
+            <h2>Adicionar Caminhão</h2>
             <form id="addOperationForm" class="form-controls">
-                <input type="text" id="teamInput" placeholder="Dupla" required>
-                <input type="datetime-local" id="startInput" required>
-                <input type="datetime-local" id="endInput" required>
-                <input type="number" id="packagesInput" placeholder="Pacotes" min="1" required>
-                <button type="submit">Adicionar</button>
-                <button type="reset">Limpar</button>
+                <select id="teamSelect" required></select>
+                <input type="number" id="packagesInput" placeholder="Pacotes do Caminhão" min="1" required>
+                <button type="submit">Adicionar Caminhão</button>
             </form>
             
             <div style="display:flex; justify-content:space-between; align-items: center; margin-top: 20px; flex-wrap: wrap;">
@@ -231,8 +210,8 @@
                     <canvas id="efficiencyChart"></canvas>
                 </div>
                 <div class="chart-container">
-                    <h3>Horas Trabalhadas</h3>
-                     <canvas id="hoursChart"></canvas>
+                    <h3>Caminhões por Dupla</h3>
+                     <canvas id="trucksChart"></canvas>
                 </div>
                 <div class="chart-container">
                     <h3>Distribuição de Volume</h3>
@@ -247,14 +226,13 @@
             <h3>Detalhes</h3>
             <table id="operationsTable">
                 <thead>
-                    <tr><th>Dupla</th><th>Início</th><th>Término</th><th>Pacotes</th><th>Duração (h)</th><th>Eficiência (pac/h)</th></tr>
+                    <tr><th>Dupla</th><th>Início</th><th>Última Atualização</th><th>Pacotes</th><th>Caminhões</th><th>Duração (h)</th><th>Eficiência (pac/h)</th></tr>
                 </thead>
                 <tbody></tbody>
             </table>
         </div>
     </div>
     
-    <!-- Modal de Confirmação -->
     <div id="confirmModal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h4>Confirmar Ação</h4>
@@ -286,30 +264,20 @@
                 const startHour = 13.5 + (index % 4) * 0.25;
                 const endHour = 22.5 - (index % 3) * 0.5;
                 const packages = 1800 + Math.floor(Math.random() * 600) - (index * 70);
+                const trucks = Math.floor(Math.random() * 2) + 1;
                 
                 data.push({
                     id: id++, team: teamName,
                     startTime: `${today}T${String(Math.floor(startHour)).padStart(2, '0')}:${String((startHour % 1) * 60).padStart(2, '0')}`,
                     endTime: `${today}T${String(Math.floor(endHour)).padStart(2, '0')}:${String((endHour % 1) * 60).padStart(2, '0')}`,
-                    packages: packages
+                    packages: packages * trucks,
+                    trucks: trucks
                 });
-
-                 if (index % 3 === 0) {
-                    const startHour2 = 18 + (index % 2);
-                    const endHour2 = 21.5;
-                    const packages2 = 800 + Math.floor(Math.random() * 300);
-                     data.push({
-                        id: id++, team: teamName,
-                        startTime: `${today}T${String(Math.floor(startHour2)).padStart(2, '0')}:${String((startHour2 % 1) * 60).padStart(2, '0')}`,
-                        endTime: `${today}T${String(Math.floor(endHour2)).padStart(2, '0')}:${String((endHour2 % 1) * 60).padStart(2, '0')}`,
-                        packages: packages2
-                    });
-                 }
             });
             return data;
         };
 
-        // --- Funções de Dados e Cores ---
+        // --- Funções de Dados e Cores (usando localStorage) ---
         const saveData = () => {
             localStorage.setItem('dockOperationsData', JSON.stringify(allOperationsData));
             localStorage.setItem('dockOperationsTeamColors', JSON.stringify(teamColors));
@@ -319,20 +287,21 @@
             const data = localStorage.getItem('dockOperationsData');
             const colors = localStorage.getItem('dockOperationsTeamColors');
             
-            if (data === '[]') return []; // Handle empty saved data
-            
             teamColors = colors ? JSON.parse(colors) : {};
             nextColorIndex = Object.keys(teamColors).length;
-            return data ? JSON.parse(data) : generateInitialData();
+            
+            if (!data || data === '[]') {
+                allOperationsData = generateInitialData();
+                saveData();
+            } else {
+                allOperationsData = JSON.parse(data);
+            }
         };
-
+        
         const getTeamInitials = (teamName) => {
             if (!teamName || typeof teamName !== 'string') return '';
             const parts = teamName.split(' ');
-            if (parts.length > 1) {
-                return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
-            }
-            return teamName.substring(0, 2).toUpperCase();
+            return parts.length > 1 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : teamName.slice(0, 2).toUpperCase();
         };
         
         const getColorForTeam = (teamName) => {
@@ -342,6 +311,15 @@
                 saveData();
             }
             return teamColors[teamName];
+        };
+
+        const populateTeamSelect = () => {
+            const select = document.getElementById('teamSelect');
+            const teams = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].map(l => `Dupla ${l}`);
+            select.innerHTML = '<option value="" disabled selected>Selecione uma Dupla</option>';
+            teams.forEach(team => {
+                select.innerHTML += `<option value="${team}">${team}</option>`;
+            });
         };
 
         // --- Funções de Renderização ---
@@ -359,8 +337,9 @@
             teams.forEach(team => {
                 const teamData = filteredOperationsData.filter(op => op.team === team);
                 const totalPackages = teamData.reduce((s, o) => s + o.packages, 0);
+                const totalTrucks = teamData.reduce((s, o) => s + o.trucks, 0);
                 const totalHours = teamData.reduce((s, o) => s + ((new Date(o.endTime) - new Date(o.startTime)) / 36e5), 0);
-                metrics[team] = { totalPackages, totalHours, avg: totalHours > 0 ? totalPackages / totalHours : 0 };
+                metrics[team] = { totalPackages, totalTrucks, totalHours, avg: totalHours > 0 ? totalPackages / totalHours : 0 };
             });
             return metrics;
         };
@@ -374,7 +353,7 @@
 
             document.getElementById('totalPackages').textContent = totalPackages.toLocaleString('pt-BR');
             document.getElementById('fastestTeam').textContent = fastest ? `${getTeamInitials(fastest[0])} (${fastest[1].avg.toFixed(1)})` : 'N/A';
-            document.getElementById('highestVolumeTeam').textContent = highest ? `${getTeamInitials(highest[0])} (${highest[1].totalPackages.toLocaleString('pt-BR')})` : 'N/A';
+            document.getElementById('highestVolumeTeam').textContent = highest ? `${getTeamInitials(highest[0])} (${highest[1].totalPackages.toLocaleString('pt-BR')} pac / ${highest[1].totalTrucks} caminhões)` : 'N/A';
             document.getElementById('averageEfficiency').textContent = avgEff.toFixed(1);
         };
         
@@ -384,7 +363,7 @@
             const commonData = { labels: [], datasets: [{ data: [], backgroundColor: [] }] };
             charts.volume = createChart(document.getElementById('volumeChart'), 'bar', { ...commonData, datasets: [{...commonData.datasets[0], label: 'Pacotes'}] });
             charts.efficiency = createChart(document.getElementById('efficiencyChart'), 'bar', { ...commonData, datasets: [{...commonData.datasets[0], label: 'Eficiência'}] });
-            charts.hours = createChart(document.getElementById('hoursChart'), 'bar', { ...commonData, datasets: [{...commonData.datasets[0], label: 'Horas'}] });
+            charts.trucks = createChart(document.getElementById('trucksChart'), 'bar', { ...commonData, datasets: [{...commonData.datasets[0], label: 'Caminhões'}] });
             charts.distribution = createChart(document.getElementById('distributionChart'), 'pie', commonData);
             
             charts.performanceLineChart = createChart(document.getElementById('performanceLineChart'), 'line', { labels: [], datasets: [] }, {
@@ -407,37 +386,26 @@
             
             updateChart(charts.volume, teamInitials, teams.map(t => metrics[t].totalPackages), colors);
             updateChart(charts.efficiency, teamInitials, teams.map(t => metrics[t].avg), colors);
-            updateChart(charts.hours, teamInitials, teams.map(t => metrics[t].totalHours), colors);
+            updateChart(charts.trucks, teamInitials, teams.map(t => metrics[t].totalTrucks), colors);
             updateChart(charts.distribution, teamInitials, teams.map(t => metrics[t].totalPackages), colors);
         };
         
         const calculateHourlyPerformance = () => {
             if (filteredOperationsData.length === 0) return { labels: [], datasets: [] };
-
-            const hourlyLabels = [];
-            for (let i = 13; i <= 23; i++) {
-                hourlyLabels.push(`${String(i).padStart(2, '0')}:00`);
-            }
-
+            const hourlyLabels = Array.from({length: 11}, (_, i) => `${String(i + 13).padStart(2, '0')}:00`);
             const teams = [...new Set(filteredOperationsData.map(op => op.team))];
             const datasets = teams.map(team => {
-                const teamData = filteredOperationsData.filter(op => op.team === team);
-                const cumulativeData = hourlyLabels.map((label, index) => {
+                const cumulativeData = hourlyLabels.map((_, index) => {
                     const hour = index + 13;
-                    const packagesUpToThisHour = teamData
-                        .filter(op => new Date(op.endTime).getHours() < hour + 1)
+                    return filteredOperationsData
+                        .filter(op => op.team === team && new Date(op.endTime).getHours() < hour + 1)
                         .reduce((sum, op) => sum + op.packages, 0);
-                    return packagesUpToThisHour;
                 });
-
                 return {
-                    label: getTeamInitials(team),
-                    data: cumulativeData,
-                    borderColor: getColorForTeam(team),
-                    fill: false,
+                    label: getTeamInitials(team), data: cumulativeData,
+                    borderColor: getColorForTeam(team), fill: false,
                 };
             });
-
             return { labels: hourlyLabels, datasets };
         };
 
@@ -451,65 +419,40 @@
         const renderTable = () => {
             const tbody = document.querySelector('#operationsTable tbody');
             tbody.innerHTML = '';
-
             if (filteredOperationsData.length === 0) {
-                const tr = document.createElement('tr');
-                tr.className = 'no-data-row';
-                tr.innerHTML = `<td colspan="6">Nenhuma operação encontrada.</td>`;
-                tbody.appendChild(tr);
+                tbody.innerHTML = `<tr class="no-data-row"><td colspan="7">Nenhuma operação encontrada.</td></tr>`;
                 return;
             }
-
             filteredOperationsData.forEach(op => {
                 const start = new Date(op.startTime);
                 const end = new Date(op.endTime);
                 const dur = (end - start) / 36e5;
                 const eff = dur > 0 ? op.packages / dur : 0;
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${getTeamInitials(op.team)}</td>
-                    <td>${start.toLocaleString('pt-BR')}</td>
-                    <td>${end.toLocaleString('pt-BR')}</td>
-                    <td>${op.packages.toLocaleString('pt-BR')}</td>
-                    <td>${dur.toFixed(1)}</td>
-                    <td>${eff.toFixed(1)}</td>
-                `;
-                tbody.appendChild(tr);
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${getTeamInitials(op.team)}</td>
+                        <td>${start.toLocaleString('pt-BR')}</td>
+                        <td>${end.toLocaleString('pt-BR')}</td>
+                        <td>${op.packages.toLocaleString('pt-BR')}</td>
+                        <td>${op.trucks}</td>
+                        <td>${dur.toFixed(1)}</td>
+                        <td>${eff.toFixed(1)}</td>
+                    </tr>`;
             });
         };
 
-        // --- Lógica de Filtros e Eventos ---
         const applyFilter = (filterValue) => {
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             
             let startDate, endDate;
             switch(filterValue) {
-                case 'today':
-                    startDate = today;
-                    endDate = new Date(today.getTime() + 86400000);
-                    break;
-                case 'yesterday':
-                    endDate = today;
-                    startDate = new Date(today.getTime() - 86400000);
-                    break;
-                case 'week':
-                    startDate = new Date(today);
-                    startDate.setDate(startDate.getDate() - now.getDay());
-                    endDate = new Date(now.getTime() + 86400000);
-                    break;
-                case 'month':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    endDate = new Date(now.getTime() + 86400000);
-                    break;
-                case 'all':
-                default:
-                    filteredOperationsData = [...allOperationsData];
-                    renderDashboard();
-                    return;
+                case 'today': startDate = today; endDate = new Date(today.getTime() + 864e5); break;
+                case 'yesterday': endDate = today; startDate = new Date(today.getTime() - 864e5); break;
+                case 'week': startDate = new Date(today); startDate.setDate(startDate.getDate() - now.getDay()); endDate = new Date(now.getTime() + 864e5); break;
+                case 'month': startDate = new Date(now.getFullYear(), now.getMonth(), 1); endDate = new Date(now.getTime() + 864e5); break;
+                default: filteredOperationsData = [...allOperationsData]; renderDashboard(); return;
             }
-            
             filteredOperationsData = allOperationsData.filter(op => {
                 const opDate = new Date(op.startTime);
                 return opDate >= startDate && opDate < endDate;
@@ -520,48 +463,55 @@
         const setupEventListeners = () => {
             document.getElementById('addOperationForm').addEventListener('submit', (e) => {
                 e.preventDefault();
-                const team = document.getElementById('teamInput').value.trim();
-                if (!team) {
-                    alert("O nome da dupla é obrigatório.");
-                    return;
-                }
-                const start = document.getElementById('startInput').value;
-                const end = document.getElementById('endInput').value;
+                const teamName = document.getElementById('teamSelect').value;
                 const packages = parseInt(document.getElementById('packagesInput').value);
+                const todayStr = new Date().toDateString();
 
-                if (new Date(end) <= new Date(start)) {
-                    alert('A data de término deve ser posterior à data de início.');
-                    return;
+                if (!teamName) return alert("Por favor, selecione uma dupla.");
+
+                let existingOp = allOperationsData.find(op => 
+                    op.team === teamName && new Date(op.startTime).toDateString() === todayStr
+                );
+
+                if (existingOp) {
+                    existingOp.packages += packages;
+                    existingOp.trucks += 1;
+                    existingOp.endTime = new Date().toISOString();
+                } else {
+                    const now = new Date().toISOString();
+                    allOperationsData.push({ 
+                        id: Date.now(), 
+                        team: teamName, 
+                        startTime: now, 
+                        endTime: now, 
+                        packages: packages,
+                        trucks: 1
+                    });
                 }
                 
-                allOperationsData.push({ id: Date.now(), team, startTime: start, endTime: end, packages });
-                getColorForTeam(team);
+                getColorForTeam(teamName);
                 saveData();
-                e.target.reset();
+                document.getElementById('addOperationForm').reset();
+                populateTeamSelect();
                 applyFilter(document.getElementById('timeRange').value);
             });
 
             document.getElementById('timeRange').addEventListener('change', (e) => applyFilter(e.target.value));
-            
             document.getElementById('exportExcel').addEventListener('click', () => {
                 const data = filteredOperationsData.map(op => ({
-                    Dupla: op.team,
-                    Inicio: new Date(op.startTime).toLocaleString('pt-BR'),
-                    Termino: new Date(op.endTime).toLocaleString('pt-BR'),
-                    Pacotes: op.packages
+                    Dupla: op.team, Inicio: new Date(op.startTime).toLocaleString('pt-BR'),
+                    'Última Atualização': new Date(op.endTime).toLocaleString('pt-BR'), Pacotes: op.packages,
+                    'Caminhões': op.trucks
                 }));
                 const ws = XLSX.utils.json_to_sheet(data);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Operações');
                 XLSX.writeFile(wb, 'operacoes.xlsx');
             });
-
             document.getElementById('captureDashboard').addEventListener('click', () => {
                 html2canvas(document.getElementById('dashboard-container')).then(canvas => {
                     const link = document.createElement('a');
-                    link.download = 'dashboard.png';
-                    link.href = canvas.toDataURL();
-                    link.click();
+                    link.download = 'dashboard.png'; link.href = canvas.toDataURL(); link.click();
                 });
             });
 
@@ -571,31 +521,23 @@
                 localStorage.setItem('theme', themeSwitch.checked ? 'dark' : 'light');
             });
             
-            // Eventos do Modal
             document.getElementById('clearDataBtn').addEventListener('click', () => {
                 document.getElementById('confirmModal').style.display = 'flex';
             });
-
             document.getElementById('cancelClearBtn').addEventListener('click', () => {
                 document.getElementById('confirmModal').style.display = 'none';
             });
-
             document.getElementById('confirmClearBtn').addEventListener('click', () => {
                 allOperationsData = [];
                 teamColors = {};
                 nextColorIndex = 0;
-                
                 saveData();
                 applyFilter('all');
-                
                 document.getElementById('confirmModal').style.display = 'none';
             });
         };
 
-        // --- Inicialização da Aplicação ---
         document.addEventListener('DOMContentLoaded', () => {
-            allOperationsData = loadData();
-            
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'dark') {
                 document.documentElement.classList.add('dark-mode');
@@ -603,11 +545,14 @@
             }
             
             initializeCharts();
+            populateTeamSelect();
             setupEventListeners();
+            loadData();
             document.getElementById('timeRange').value = 'today';
             applyFilter('today');
         });
     </script>
 </body>
 </html>
+
 
