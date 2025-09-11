@@ -1,204 +1,613 @@
-<!DOCTYPE html><html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard de Operações de Doca</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <style>
-    :root {
-      --primary-color: #2c3e50;
-      --secondary-color: #3498db;
-      --accent-color: #e74c3c;
-      --light-color: #ecf0f1;
-      --success-color: #27ae60;
-      --text-color: #333;
-      --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    body { background: #f5f7fa; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-    .app-container { max-width: 1400px; margin: 0 auto; }
-    header { background: var(--primary-color); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: var(--card-shadow); }
-    .control-panel, .dashboard { background: white; padding: 20px; border-radius: 10px; box-shadow: var(--card-shadow); margin-bottom: 20px; }
-    button, input, select { padding: 10px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; }
-    button { background: var(--secondary-color); color: white; cursor: pointer; }
-    button:hover { background: #2980b9; }
-    .kpi-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .kpi-card { background: var(--light-color); padding: 20px; border-radius: 10px; text-align: center; box-shadow: var(--card-shadow); }
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
-    th { background: var(--primary-color); color: white; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Operações de Doca v2.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #f5f7fa;
+            --secondary-bg: #ffffff;
+            --header-bg: #2c3e50;
+            --text-color: #333;
+            --primary-accent: #3498db;
+            --primary-accent-hover: #2980b9;
+            --card-bg: #ecf0f1;
+            --border-color: #ddd;
+            --shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            --danger-color: #e74c3c;
+            --danger-hover-color: #c0392b;
+            --transition-speed: 0.3s;
+        }
+
+        html.dark-mode {
+            --primary-bg: #1a202c;
+            --secondary-bg: #2d3748;
+            --header-bg: #1a202c;
+            --text-color: #e2e8f0;
+            --primary-accent: #4299e1;
+            --primary-accent-hover: #2b6cb0;
+            --card-bg: #4a5568;
+            --border-color: #4a5568;
+        }
+
+        body {
+            background: var(--primary-bg);
+            color: var(--text-color);
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            transition: background var(--transition-speed), color var(--transition-speed);
+        }
+
+        .app-container { max-width: 1400px; margin: 0 auto; }
+        
+        header {
+            background: var(--header-bg);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .control-panel, .dashboard {
+            background: var(--secondary-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            transition: background var(--transition-speed);
+        }
+
+        button, input, select {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background: var(--secondary-bg);
+            color: var(--text-color);
+        }
+
+        button {
+            background: var(--primary-accent);
+            color: white;
+            cursor: pointer;
+            border: none;
+            transition: background var(--transition-speed);
+        }
+
+        button:hover { background: var(--primary-accent-hover); }
+        
+        .kpi-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .kpi-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, background var(--transition-speed);
+        }
+        .kpi-card:hover { transform: translateY(-5px); }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .chart-container {
+            position: relative;
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--secondary-bg);
+            box-shadow: var(--shadow);
+        }
+        
+        .chart-container h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: var(--header-bg);
+        }
+
+        html.dark-mode .chart-container h3 {
+            color: var(--text-color);
+        }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border-bottom: 1px solid var(--border-color); text-align: left; }
+        th { background: var(--header-bg); color: white; }
+
+        .form-controls { display: flex; flex-wrap: wrap; align-items: center; }
+        .no-data-row td { text-align: center; color: #777; padding: 20px; }
+
+        /* Estilos do Modal de Confirmação */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--secondary-bg);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .modal-buttons {
+            margin-top: 20px;
+        }
+        
+        #confirmClearBtn {
+            background-color: var(--danger-color);
+        }
+        #confirmClearBtn:hover {
+            background-color: var(--danger-hover-color);
+        }
+    </style>
 </head>
 <body>
-  <div class="app-container">
-    <header>
-      <h1>Dashboard de Operações de Doca</h1>
-      <p>Monitoramento em tempo real</p>
-    </header><div class="control-panel">
-  <h2>Adicionar Operação Manualmente</h2>
-  <input type="text" id="teamInput" placeholder="Dupla">
-  <input type="datetime-local" id="startInput">
-  <input type="datetime-local" id="endInput">
-  <input type="number" id="packagesInput" placeholder="Pacotes">
-  <button id="addManualBtn">Adicionar</button>
+    <div class="app-container">
+        <header>
+            <div>
+                <h1>Dashboard de Operações de Doca</h1>
+                <p>Monitoramento em tempo real com dados persistentes</p>
+            </div>
+            <div class="theme-switch-wrapper">
+                <span>Modo Escuro</span>
+                <input type="checkbox" id="theme-switch" style="display:none;">
+                <label for="theme-switch" style="cursor:pointer; font-size: 1.5em;">🌓</label>
+            </div>
+        </header>
 
-  <h3>Filtros</h3>
-  <select id="timeRange">
-    <option value="today">Hoje</option>
-    <option value="yesterday">Ontem</option>
-    <option value="week">Esta Semana</option>
-    <option value="month">Este Mês</option>
-  </select>
+        <div class="control-panel">
+            <h2>Adicionar Operação Manualmente</h2>
+            <form id="addOperationForm" class="form-controls">
+                <input type="text" id="teamInput" placeholder="Dupla" required>
+                <input type="datetime-local" id="startInput" required>
+                <input type="datetime-local" id="endInput" required>
+                <input type="number" id="packagesInput" placeholder="Pacotes" min="1" required>
+                <button type="submit">Adicionar</button>
+                <button type="reset">Limpar</button>
+            </form>
+            
+            <div style="display:flex; justify-content:space-between; align-items: center; margin-top: 20px; flex-wrap: wrap;">
+                <div>
+                    <h3>Filtros</h3>
+                    <select id="timeRange">
+                        <option value="all">Tudo</option>
+                        <option value="today">Hoje</option>
+                        <option value="yesterday">Ontem</option>
+                        <option value="week">Esta Semana</option>
+                        <option value="month">Este Mês</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div>
+                        <h3>Exportação</h3>
+                        <button id="exportExcel">Exportar Excel</button>
+                        <button id="captureDashboard">Capturar Dashboard</button>
+                    </div>
+                    <div>
+                        <h3>Ações</h3>
+                        <button id="clearDataBtn" style="background-color: var(--danger-color);">Limpar Dados</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-  <h3>Exportação</h3>
-  <button id="exportExcel">Exportar Excel</button>
-  <button id="captureDashboard">Capturar Dashboard</button>
-</div>
+        <div id="dashboard-container" class="dashboard">
+            <h2>Métricas</h2>
+            <div class="kpi-cards">
+                <div class="kpi-card"><h3>Total de Pacotes</h3><p id="totalPackages">0</p></div>
+                <div class="kpi-card"><h3>Dupla Mais Rápida (pac/h)</h3><p id="fastestTeam">N/A</p></div>
+                <div class="kpi-card"><h3>Maior Volume</h3><p id="highestVolumeTeam">N/A</p></div>
+                <div class="kpi-card"><h3>Eficiência Média (pac/h)</h3><p id="averageEfficiency">0</p></div>
+            </div>
 
-<div id="dashboard-container" class="dashboard">
-  <h2>Métricas</h2>
-  <div class="kpi-cards">
-    <div class="kpi-card"><h3>Total de Pacotes</h3><p id="totalPackages">0</p></div>
-    <div class="kpi-card"><h3>Dupla Mais Rápida</h3><p id="fastestTeam">N/A</p></div>
-    <div class="kpi-card"><h3>Maior Volume</h3><p id="highestVolumeTeam">N/A</p></div>
-    <div class="kpi-card"><h3>Eficiência Média</h3><p id="averageEfficiency">0</p></div>
-  </div>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>Volume por Dupla</h3>
+                    <canvas id="volumeChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Eficiência por Dupla (pac/h)</h3>
+                    <canvas id="efficiencyChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Horas Trabalhadas</h3>
+                     <canvas id="hoursChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Distribuição de Volume</h3>
+                    <canvas id="distributionChart"></canvas>
+                </div>
+                <div class="chart-container" style="grid-column: 1 / -1;">
+                    <h3>Desempenho Acumulado por Hora</h3>
+                    <canvas id="performanceLineChart"></canvas>
+                </div>
+            </div>
 
-  <div class="charts-grid">
-    <canvas id="volumeChart"></canvas>
-    <canvas id="efficiencyChart"></canvas>
-    <canvas id="hoursChart"></canvas>
-    <canvas id="distributionChart"></canvas>
-  </div>
+            <h3>Detalhes</h3>
+            <table id="operationsTable">
+                <thead>
+                    <tr><th>Dupla</th><th>Início</th><th>Término</th><th>Pacotes</th><th>Duração (h)</th><th>Eficiência (pac/h)</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Modal de Confirmação -->
+    <div id="confirmModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h4>Confirmar Ação</h4>
+            <p>Tem a certeza de que deseja apagar todos os dados das operações? Esta ação não pode ser desfeita.</p>
+            <div class="modal-buttons">
+                <button id="confirmClearBtn">Sim, Limpar Tudo</button>
+                <button id="cancelClearBtn">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
-  <h3>Detalhes</h3>
-  <table id="operationsTable">
-    <thead>
-      <tr><th>Dupla</th><th>Início</th><th>Término</th><th>Pacotes</th><th>Duração (h)</th><th>Eficiência</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
+    <script>
+        // --- Estado da Aplicação e Dados ---
+        let allOperationsData = [];
+        let filteredOperationsData = [];
+        let charts = {};
+        let teamColors = {};
+        let nextColorIndex = 0;
+        const PREDEFINED_COLORS = ['#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#f1c40f', '#1abc9c', '#e67e22', '#34495e', '#7f8c8d', '#d35400'];
 
-  </div>  <script>
-    const sampleData = [
-      { team: 'Dupla A', startTime: '2025-09-10T08:00', endTime: '2025-09-10T16:00', packages: 2450 },
-      { team: 'Dupla B', startTime: '2025-09-10T08:15', endTime: '2025-09-10T15:45', packages: 1980 }
-    ];
+        const generateInitialData = () => {
+            const teams = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+            const data = [];
+            let id = 1;
+            const today = new Date().toISOString().slice(0, 10);
 
-    let operationsData = [...sampleData];
-    let performanceMetrics = {};
-    let charts = {};
+            teams.forEach((letter, index) => {
+                const teamName = `Dupla ${letter}`;
+                const startHour = 13.5 + (index % 4) * 0.25;
+                const endHour = 22.5 - (index % 3) * 0.5;
+                const packages = 1800 + Math.floor(Math.random() * 600) - (index * 70);
+                
+                data.push({
+                    id: id++, team: teamName,
+                    startTime: `${today}T${String(Math.floor(startHour)).padStart(2, '0')}:${String((startHour % 1) * 60).padStart(2, '0')}`,
+                    endTime: `${today}T${String(Math.floor(endHour)).padStart(2, '0')}:${String((endHour % 1) * 60).padStart(2, '0')}`,
+                    packages: packages
+                });
 
-    document.addEventListener('DOMContentLoaded', () => {
-      calculatePerformanceMetrics();
-      renderDashboard();
-      setupEventListeners();
-    });
+                 if (index % 3 === 0) {
+                    const startHour2 = 18 + (index % 2);
+                    const endHour2 = 21.5;
+                    const packages2 = 800 + Math.floor(Math.random() * 300);
+                     data.push({
+                        id: id++, team: teamName,
+                        startTime: `${today}T${String(Math.floor(startHour2)).padStart(2, '0')}:${String((startHour2 % 1) * 60).padStart(2, '0')}`,
+                        endTime: `${today}T${String(Math.floor(endHour2)).padStart(2, '0')}:${String((endHour2 % 1) * 60).padStart(2, '0')}`,
+                        packages: packages2
+                    });
+                 }
+            });
+            return data;
+        };
 
-    function calculatePerformanceMetrics() {
-      const teams = [...new Set(operationsData.map(op => op.team))];
-      const metrics = {};
-      teams.forEach(team => {
-        const teamData = operationsData.filter(op => op.team === team);
-        const totalPackages = teamData.reduce((s, o) => s + o.packages, 0);
-        const totalHours = teamData.reduce((s, o) => s + ((new Date(o.endTime) - new Date(o.startTime)) / 36e5), 0);
-        metrics[team] = { totalPackages, totalHours, avg: totalHours ? totalPackages / totalHours : 0 };
-      });
-      performanceMetrics = metrics;
-    }
+        // --- Funções de Dados e Cores ---
+        const saveData = () => {
+            localStorage.setItem('dockOperationsData', JSON.stringify(allOperationsData));
+            localStorage.setItem('dockOperationsTeamColors', JSON.stringify(teamColors));
+        };
 
-    function renderDashboard() {
-      updateKPIs();
-      renderCharts();
-      renderTable();
-    }
+        const loadData = () => {
+            const data = localStorage.getItem('dockOperationsData');
+            const colors = localStorage.getItem('dockOperationsTeamColors');
+            
+            if (data === '[]') return []; // Handle empty saved data
+            
+            teamColors = colors ? JSON.parse(colors) : {};
+            nextColorIndex = Object.keys(teamColors).length;
+            return data ? JSON.parse(data) : generateInitialData();
+        };
 
-    function updateKPIs() {
-      const totalPackages = Object.values(performanceMetrics).reduce((s, m) => s + m.totalPackages, 0);
-      const totalHours = Object.values(performanceMetrics).reduce((s, m) => s + m.totalHours, 0);
-      const avgEff = totalHours ? totalPackages / totalHours : 0;
-      const fastest = Object.entries(performanceMetrics).sort((a,b)=>b[1].avg-a[1].avg)[0];
-      const highest = Object.entries(performanceMetrics).sort((a,b)=>b[1].totalPackages-a[1].totalPackages)[0];
-      document.getElementById('totalPackages').textContent = totalPackages;
-      document.getElementById('fastestTeam').textContent = fastest ? `${fastest[0]} (${fastest[1].avg.toFixed(1)})` : 'N/A';
-      document.getElementById('highestVolumeTeam').textContent = highest ? `${highest[0]} (${highest[1].totalPackages})` : 'N/A';
-      document.getElementById('averageEfficiency').textContent = avgEff.toFixed(1);
-    }
+        const getTeamInitials = (teamName) => {
+            if (!teamName || typeof teamName !== 'string') return '';
+            const parts = teamName.split(' ');
+            if (parts.length > 1) {
+                return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+            }
+            return teamName.substring(0, 2).toUpperCase();
+        };
+        
+        const getColorForTeam = (teamName) => {
+            if (!teamColors[teamName]) {
+                teamColors[teamName] = PREDEFINED_COLORS[nextColorIndex % PREDEFINED_COLORS.length];
+                nextColorIndex++;
+                saveData();
+            }
+            return teamColors[teamName];
+        };
 
-    function renderCharts() {
-      const teams = Object.keys(performanceMetrics);
-      const vols = teams.map(t => performanceMetrics[t].totalPackages);
-      const effs = teams.map(t => performanceMetrics[t].avg);
-      const hrs = teams.map(t => performanceMetrics[t].totalHours);
-      const colors = ['#3498db','#2ecc71','#e74c3c','#9b59b6','#f1c40f'];
-      if (charts.volume) charts.volume.destroy();
-      charts.volume = new Chart(document.getElementById('volumeChart'), { type: 'bar', data:{ labels:teams, datasets:[{label:'Pacotes', data:vols, backgroundColor:colors}]}});
-      if (charts.efficiency) charts.efficiency.destroy();
-      charts.efficiency = new Chart(document.getElementById('efficiencyChart'), { type: 'bar', data:{ labels:teams, datasets:[{label:'Eficiência', data:effs, backgroundColor:colors}]}});
-      if (charts.hours) charts.hours.destroy();
-      charts.hours = new Chart(document.getElementById('hoursChart'), { type: 'bar', data:{ labels:teams, datasets:[{label:'Horas', data:hrs, backgroundColor:colors}]}});
-      if (charts.distribution) charts.distribution.destroy();
-      charts.distribution = new Chart(document.getElementById('distributionChart'), { type: 'pie', data:{ labels:teams, datasets:[{data:vols, backgroundColor:colors}]}});
-    }
+        // --- Funções de Renderização ---
+        const renderDashboard = () => {
+            const performanceMetrics = calculatePerformanceMetrics();
+            updateKPIs(performanceMetrics);
+            renderBarAndPieCharts(performanceMetrics);
+            renderPerformanceLineChart();
+            renderTable();
+        };
 
-    function renderTable() {
-      const tbody = document.querySelector('#operationsTable tbody');
-      tbody.innerHTML = '';
-      operationsData.forEach(op => {
-        const start = new Date(op.startTime);
-        const end = new Date(op.endTime);
-        const dur = (end - start) / 36e5;
-        const eff = dur ? op.packages / dur : 0;
-        tbody.innerHTML += `<tr><td>${op.team}</td><td>${start.toLocaleString()}</td><td>${end.toLocaleString()}</td><td>${op.packages}</td><td>${dur.toFixed(1)}</td><td>${eff.toFixed(1)}</td></tr>`;
-      });
-    }
+        const calculatePerformanceMetrics = () => {
+            const teams = [...new Set(filteredOperationsData.map(op => op.team))];
+            const metrics = {};
+            teams.forEach(team => {
+                const teamData = filteredOperationsData.filter(op => op.team === team);
+                const totalPackages = teamData.reduce((s, o) => s + o.packages, 0);
+                const totalHours = teamData.reduce((s, o) => s + ((new Date(o.endTime) - new Date(o.startTime)) / 36e5), 0);
+                metrics[team] = { totalPackages, totalHours, avg: totalHours > 0 ? totalPackages / totalHours : 0 };
+            });
+            return metrics;
+        };
+        
+        const updateKPIs = (metrics) => {
+            const totalPackages = Object.values(metrics).reduce((s, m) => s + m.totalPackages, 0);
+            const totalHours = Object.values(metrics).reduce((s, m) => s + m.totalHours, 0);
+            const avgEff = totalHours > 0 ? totalPackages / totalHours : 0;
+            const fastest = Object.entries(metrics).sort((a, b) => b[1].avg - a[1].avg)[0];
+            const highest = Object.entries(metrics).sort((a, b) => b[1].totalPackages - a[1].totalPackages)[0];
 
-    function setupEventListeners() {
-      document.getElementById('addManualBtn').addEventListener('click', () => {
-        const team = document.getElementById('teamInput').value;
-        const start = document.getElementById('startInput').value;
-        const end = document.getElementById('endInput').value;
-        const packages = parseInt(document.getElementById('packagesInput').value);
-        if(team && start && end && packages){
-          operationsData.push({team, startTime:start, endTime:end, packages});
-          calculatePerformanceMetrics();
-          renderDashboard();
-        }
-      });
+            document.getElementById('totalPackages').textContent = totalPackages.toLocaleString('pt-BR');
+            document.getElementById('fastestTeam').textContent = fastest ? `${getTeamInitials(fastest[0])} (${fastest[1].avg.toFixed(1)})` : 'N/A';
+            document.getElementById('highestVolumeTeam').textContent = highest ? `${getTeamInitials(highest[0])} (${highest[1].totalPackages.toLocaleString('pt-BR')})` : 'N/A';
+            document.getElementById('averageEfficiency').textContent = avgEff.toFixed(1);
+        };
+        
+        const initializeCharts = () => {
+            const createChart = (ctx, type, data, options = {}) => new Chart(ctx, { type, data, options });
+            
+            const commonData = { labels: [], datasets: [{ data: [], backgroundColor: [] }] };
+            charts.volume = createChart(document.getElementById('volumeChart'), 'bar', { ...commonData, datasets: [{...commonData.datasets[0], label: 'Pacotes'}] });
+            charts.efficiency = createChart(document.getElementById('efficiencyChart'), 'bar', { ...commonData, datasets: [{...commonData.datasets[0], label: 'Eficiência'}] });
+            charts.hours = createChart(document.getElementById('hoursChart'), 'bar', { ...commonData, datasets: [{...commonData.datasets[0], label: 'Horas'}] });
+            charts.distribution = createChart(document.getElementById('distributionChart'), 'pie', commonData);
+            
+            charts.performanceLineChart = createChart(document.getElementById('performanceLineChart'), 'line', { labels: [], datasets: [] }, {
+                scales: { y: { beginAtZero: true } },
+                elements: { line: { tension: 0.2 } }
+            });
+        };
+        
+        const renderBarAndPieCharts = (metrics) => {
+            const teams = Object.keys(metrics);
+            const teamInitials = teams.map(t => getTeamInitials(t));
+            const colors = teams.map(team => getColorForTeam(team));
+            
+            const updateChart = (chart, labels, data, bgColors) => {
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = data;
+                chart.data.datasets[0].backgroundColor = bgColors;
+                chart.update();
+            };
+            
+            updateChart(charts.volume, teamInitials, teams.map(t => metrics[t].totalPackages), colors);
+            updateChart(charts.efficiency, teamInitials, teams.map(t => metrics[t].avg), colors);
+            updateChart(charts.hours, teamInitials, teams.map(t => metrics[t].totalHours), colors);
+            updateChart(charts.distribution, teamInitials, teams.map(t => metrics[t].totalPackages), colors);
+        };
+        
+        const calculateHourlyPerformance = () => {
+            if (filteredOperationsData.length === 0) return { labels: [], datasets: [] };
 
-      document.getElementById('exportExcel').addEventListener('click', () => {
-        const data = operationsData.map(op => ({ Dupla:op.team, Inicio:op.startTime, Termino:op.endTime, Pacotes:op.packages }));
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Operações');
-        XLSX.writeFile(wb, 'operacoes.xlsx');
-      });
+            const hourlyLabels = [];
+            for (let i = 13; i <= 23; i++) {
+                hourlyLabels.push(`${String(i).padStart(2, '0')}:00`);
+            }
 
-      document.getElementById('captureDashboard').addEventListener('click', () => {
-        html2canvas(document.getElementById('dashboard-container')).then(canvas => {
-          const link = document.createElement('a');
-          link.download = 'dashboard.png';
-          link.href = canvas.toDataURL();
-          link.click();
+            const teams = [...new Set(filteredOperationsData.map(op => op.team))];
+            const datasets = teams.map(team => {
+                const teamData = filteredOperationsData.filter(op => op.team === team);
+                const cumulativeData = hourlyLabels.map((label, index) => {
+                    const hour = index + 13;
+                    const packagesUpToThisHour = teamData
+                        .filter(op => new Date(op.endTime).getHours() < hour + 1)
+                        .reduce((sum, op) => sum + op.packages, 0);
+                    return packagesUpToThisHour;
+                });
+
+                return {
+                    label: getTeamInitials(team),
+                    data: cumulativeData,
+                    borderColor: getColorForTeam(team),
+                    fill: false,
+                };
+            });
+
+            return { labels: hourlyLabels, datasets };
+        };
+
+        const renderPerformanceLineChart = () => {
+            const hourlyData = calculateHourlyPerformance();
+            charts.performanceLineChart.data.labels = hourlyData.labels;
+            charts.performanceLineChart.data.datasets = hourlyData.datasets;
+            charts.performanceLineChart.update();
+        };
+
+        const renderTable = () => {
+            const tbody = document.querySelector('#operationsTable tbody');
+            tbody.innerHTML = '';
+
+            if (filteredOperationsData.length === 0) {
+                const tr = document.createElement('tr');
+                tr.className = 'no-data-row';
+                tr.innerHTML = `<td colspan="6">Nenhuma operação encontrada.</td>`;
+                tbody.appendChild(tr);
+                return;
+            }
+
+            filteredOperationsData.forEach(op => {
+                const start = new Date(op.startTime);
+                const end = new Date(op.endTime);
+                const dur = (end - start) / 36e5;
+                const eff = dur > 0 ? op.packages / dur : 0;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${getTeamInitials(op.team)}</td>
+                    <td>${start.toLocaleString('pt-BR')}</td>
+                    <td>${end.toLocaleString('pt-BR')}</td>
+                    <td>${op.packages.toLocaleString('pt-BR')}</td>
+                    <td>${dur.toFixed(1)}</td>
+                    <td>${eff.toFixed(1)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        // --- Lógica de Filtros e Eventos ---
+        const applyFilter = (filterValue) => {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            let startDate, endDate;
+            switch(filterValue) {
+                case 'today':
+                    startDate = today;
+                    endDate = new Date(today.getTime() + 86400000);
+                    break;
+                case 'yesterday':
+                    endDate = today;
+                    startDate = new Date(today.getTime() - 86400000);
+                    break;
+                case 'week':
+                    startDate = new Date(today);
+                    startDate.setDate(startDate.getDate() - now.getDay());
+                    endDate = new Date(now.getTime() + 86400000);
+                    break;
+                case 'month':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    endDate = new Date(now.getTime() + 86400000);
+                    break;
+                case 'all':
+                default:
+                    filteredOperationsData = [...allOperationsData];
+                    renderDashboard();
+                    return;
+            }
+            
+            filteredOperationsData = allOperationsData.filter(op => {
+                const opDate = new Date(op.startTime);
+                return opDate >= startDate && opDate < endDate;
+            });
+            renderDashboard();
+        };
+        
+        const setupEventListeners = () => {
+            document.getElementById('addOperationForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const team = document.getElementById('teamInput').value.trim();
+                if (!team) {
+                    alert("O nome da dupla é obrigatório.");
+                    return;
+                }
+                const start = document.getElementById('startInput').value;
+                const end = document.getElementById('endInput').value;
+                const packages = parseInt(document.getElementById('packagesInput').value);
+
+                if (new Date(end) <= new Date(start)) {
+                    alert('A data de término deve ser posterior à data de início.');
+                    return;
+                }
+                
+                allOperationsData.push({ id: Date.now(), team, startTime: start, endTime: end, packages });
+                getColorForTeam(team);
+                saveData();
+                e.target.reset();
+                applyFilter(document.getElementById('timeRange').value);
+            });
+
+            document.getElementById('timeRange').addEventListener('change', (e) => applyFilter(e.target.value));
+            
+            document.getElementById('exportExcel').addEventListener('click', () => {
+                const data = filteredOperationsData.map(op => ({
+                    Dupla: op.team,
+                    Inicio: new Date(op.startTime).toLocaleString('pt-BR'),
+                    Termino: new Date(op.endTime).toLocaleString('pt-BR'),
+                    Pacotes: op.packages
+                }));
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Operações');
+                XLSX.writeFile(wb, 'operacoes.xlsx');
+            });
+
+            document.getElementById('captureDashboard').addEventListener('click', () => {
+                html2canvas(document.getElementById('dashboard-container')).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'dashboard.png';
+                    link.href = canvas.toDataURL();
+                    link.click();
+                });
+            });
+
+            const themeSwitch = document.getElementById('theme-switch');
+            themeSwitch.addEventListener('change', () => {
+                document.documentElement.classList.toggle('dark-mode');
+                localStorage.setItem('theme', themeSwitch.checked ? 'dark' : 'light');
+            });
+            
+            // Eventos do Modal
+            document.getElementById('clearDataBtn').addEventListener('click', () => {
+                document.getElementById('confirmModal').style.display = 'flex';
+            });
+
+            document.getElementById('cancelClearBtn').addEventListener('click', () => {
+                document.getElementById('confirmModal').style.display = 'none';
+            });
+
+            document.getElementById('confirmClearBtn').addEventListener('click', () => {
+                allOperationsData = [];
+                teamColors = {};
+                nextColorIndex = 0;
+                
+                saveData();
+                applyFilter('all');
+                
+                document.getElementById('confirmModal').style.display = 'none';
+            });
+        };
+
+        // --- Inicialização da Aplicação ---
+        document.addEventListener('DOMContentLoaded', () => {
+            allOperationsData = loadData();
+            
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+                document.getElementById('theme-switch').checked = true;
+            }
+            
+            initializeCharts();
+            setupEventListeners();
+            document.getElementById('timeRange').value = 'today';
+            applyFilter('today');
         });
-      });
-
-      document.getElementById('timeRange').addEventListener('change', (e) => {
-        const now = new Date();
-        let startDate;
-        if(e.target.value==='today') startDate=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-        if(e.target.value==='yesterday') startDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1);
-        if(e.target.value==='week') startDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()-7);
-        if(e.target.value==='month') startDate=new Date(now.getFullYear(),now.getMonth()-1,now.getDate());
-        operationsData = sampleData.filter(op => new Date(op.startTime) >= startDate);
-        calculatePerformanceMetrics();
-        renderDashboard();
-      });
-    }
-  </script></body>
+    </script>
+</body>
 </html>
-
 
